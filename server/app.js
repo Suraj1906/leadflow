@@ -1,6 +1,7 @@
 
 import express from "express";
 import cors from "cors";
+import authRoutes from "./routes/authRoutes.js";
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(
 
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use("/api/auth", authRoutes);
 
 // Health check API
 app.get("/api/health", (req, res) => {
