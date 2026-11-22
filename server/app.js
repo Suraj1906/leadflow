@@ -10,7 +10,7 @@ app.use(
   cors({
     origin: [
   "http://localhost:5173",
-  "https://leadflow-frontend.vercel.app",
+   "https://leadflow-frontend-blush.vercel.app",
 ],
 credentials: true,
   })
