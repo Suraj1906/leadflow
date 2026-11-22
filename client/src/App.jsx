@@ -1,51 +1,119 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
 
-export default function TailwindColorTest() {
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+} from "react-router-dom";
+
+import { Toaster } from "react-hot-toast";
+
+import { AuthProvider, useAuth } from "./context/AuthContext";
+
+import DashboardLayout from "./components/layout/DashboardLayout";
+import ProtectedRoute from "./components/common/ProtectedRoute";
+
+import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Leads from "./pages/Leads";
+
+const LeadsPlaceholder = () => (
+  <div className="bg-white rounded-2xl border border-gray-100 p-8">
+    <h1 className="text-2xl font-extrabold text-gray-900">
+      Leads Management
+    </h1>
+    <p className="text-sm text-gray-500 mt-2">
+      Your leads management page will be available here.
+    </p>
+  </div>
+);
+
+const SettingsPlaceholder = () => (
+  <div className="bg-white rounded-2xl border border-gray-100 p-8">
+    <h1 className="text-2xl font-extrabold text-gray-900">
+      Settings
+    </h1>
+    <p className="text-sm text-gray-500 mt-2">
+      Workspace settings will be available here.
+    </p>
+  </div>
+);
+
+const GuestRoute = () => {
+  const { isAuthenticated } = useAuth();
+
+  return isAuthenticated
+    ? <Navigate to="/dashboard" replace />
+    : <Outlet />;
+};
+
+const AppRoutes = () => {
+  const { isAuthenticated } = useAuth();
+
   return (
-    <div className="min-h-screen bg-slate-900 p-8 text-white">
-      <div className="mx-auto max-w-2xl space-y-6 rounded-xl bg-slate-800 p-6 shadow-lg border border-slate-700">
-        
-        {/* Text & Heading Colors */}
-        <div>
-          <h1 className="text-3xl font-bold text-sky-400">
-            Tailwind Color Test
-          </h1>
-          <p className="mt-2 text-slate-300">
-            If you see a dark background, colored boxes below, and styled text, Tailwind is working!
-          </p>
-        </div>
+    <>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            borderRadius: "12px",
+            fontSize: "14px",
+          },
+        }}
+      />
 
-        {/* Color Swatches */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-lg bg-red-500 p-4 text-center font-semibold text-white">
-            bg-red-500
-          </div>
-          <div className="rounded-lg bg-emerald-500 p-4 text-center font-semibold text-slate-950">
-            bg-emerald-500
-          </div>
-          <div className="rounded-lg bg-amber-400 p-4 text-center font-semibold text-slate-950">
-            bg-amber-400
-          </div>
-          <div className="rounded-lg bg-purple-600 p-4 text-center font-semibold text-white">
-            bg-purple-600
-          </div>
-        </div>
+      <Routes>
+        {/* Guest Routes */}
+        <Route element={<GuestRoute />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+        </Route>
 
-        {/* Interactive Hover & Border Test */}
-        <div className="flex flex-wrap gap-4 pt-2">
-          <button className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white transition hover:bg-indigo-500">
-            Hover Indigo
-          </button>
-          <button className="rounded-lg border-2 border-pink-500 px-4 py-2 font-medium text-pink-400 transition hover:bg-pink-500 hover:text-white">
-            Pink Outline
-          </button>
-        </div>
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/leads" element={<Leads />} />
+            <Route path="/settings" element={<SettingsPlaceholder />} />
+          </Route>
+        </Route>
 
-      </div>
-    </div>
-     );
+        {/* Default Route */}
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to={isAuthenticated ? "/dashboard" : "/login"}
+              replace
+            />
+          }
+        />
+
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to={isAuthenticated ? "/dashboard" : "/login"}
+              replace
+            />
+          }
+        />
+      </Routes>
+    </>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
+
+export default App;

@@ -233,13 +233,51 @@ export const deleteLead = async (req, res) => {
 };
 
 
+
 export const getLeadStats = async (req, res) => {
   try {
+    const { startDate, endDate } = req.query;
+
+    // Base filter: only logged-in user's leads
+    const filter = {
+      user: new mongoose.Types.ObjectId(req.user.id),
+    };
+
+    // Apply selected date range
+    if (startDate || endDate) {
+      filter.createdAt = {};
+
+      if (startDate) {
+        const start = new Date(startDate);
+
+        if (isNaN(start.getTime())) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid start date",
+          });
+        }
+
+        filter.createdAt.$gte = start;
+      }
+
+      if (endDate) {
+        const end = new Date(endDate);
+
+        if (isNaN(end.getTime())) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid end date",
+          });
+        }
+
+        end.setHours(23, 59, 59, 999);
+        filter.createdAt.$lte = end;
+      }
+    }
+
     const stats = await Lead.aggregate([
       {
-        $match: {
-          user: new mongoose.Types.ObjectId(req.user.id),
-        },
+        $match: filter,
       },
       {
         $group: {
@@ -279,3 +317,108 @@ export const getLeadStats = async (req, res) => {
     });
   }
 };
+
+
+
+// @desc    Get monthly lead growth for the last 6 months
+// @route   GET /api/leads/growth
+// @access  Private
+
+
+export const getLeadGrowth = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const now = new Date();
+
+    let start = startDate
+      ? new Date(startDate)
+      : new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+    let end = endDate ? new Date(endDate) : now;
+
+    if (
+      isNaN(start.getTime()) ||
+      isNaN(end.getTime()) ||
+      start > end
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid date range",
+      });
+    }
+
+    const growthData = await Lead.aggregate([
+      {
+        $match: {
+          user: new mongoose.Types.ObjectId(req.user.id),
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+            day: { $dayOfMonth: "$createdAt" },
+          },
+          leads: { $sum: 1 },
+        },
+      },
+      {
+        $sort: {
+          "_id.year": 1,
+          "_id.month": 1,
+          "_id.day": 1,
+        },
+      },
+    ]);
+
+    const dailyData = [];
+
+    const currentDate = new Date(start);
+    currentDate.setHours(0, 0, 0, 0);
+
+    const lastDate = new Date(end);
+    lastDate.setHours(0, 0, 0, 0);
+
+    while (currentDate <= lastDate) {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth() + 1;
+      const day = currentDate.getDate();
+
+      const existingData = growthData.find(
+        (item) =>
+          item._id.year === year &&
+          item._id.month === month &&
+          item._id.day === day
+      );
+
+      dailyData.push({
+        month: currentDate.toLocaleString("en-US", {
+          month: "short",
+        }),
+        day,
+        leads: existingData?.leads || 0,
+      });
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return res.status(200).json({
+      success: true,
+      growth: dailyData,
+    });
+  } catch (error) {
+    console.error("Lead Growth Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch lead growth",
+    });
+  }
+};
+

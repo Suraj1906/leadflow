@@ -11,6 +11,7 @@ import {
   updateLead,
   deleteLead,
   getLeadStats,
+   getLeadGrowth,
 } from "../controllers/leadController.js";
 
 import {
@@ -32,6 +33,8 @@ router.get("/", getLeads);
 
 router.get("/stats", getLeadStats);
 
+router.get("/growth", getLeadGrowth);
+
 // Get a single lead
 router.get("/:id", getLeadById);
 
@@ -40,5 +43,7 @@ router.put("/:id", validateLeadUpdate, checkValidation, updateLead);
 
 // Delete a lead
 router.delete("/:id", deleteLead);
+
+
 
 export default router;
