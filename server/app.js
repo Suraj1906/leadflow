@@ -3,7 +3,22 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import leadRoutes from "./routes/leadRoutes.js";
+import connectDB from "./config/db.js";
 const app = express();
+const ensureDB = async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error("Database request failed:", error.message);
+
+    res.status(503).json({
+      success: false,
+      message: "Database connection failed",
+    });
+  }
+};
+
 
 // Middleware
 app.use(
@@ -18,7 +33,7 @@ credentials: true,
 
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true }));
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", ensureDB, authRoutes);
 
 // Health check API
 app.get("/api/health", (req, res) => {
@@ -28,7 +43,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-app.use("/api/leads", leadRoutes);
+app.use("/api/leads", ensureDB, leadRoutes);
 
 // 404 handler
 app.use((req, res) => {
